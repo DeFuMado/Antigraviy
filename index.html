@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+    content="Aplicativo de acompanhamento do plano de saída da downswing. Controle sessões, tilt, estudo e análise de spots.">
+  <title>🎯 Downswing Recovery Plan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f0f1a">
+</head>
+
+<body>
+  <!-- Top Bar: Daily Progress -->
+  <div class="top-bar">
+    <div class="top-bar-inner">
+      <div class="top-bar-left">
+        <span class="app-logo">♠️</span>
+        <span class="app-title">Downswing Recovery</span>
+      </div>
+      <div class="daily-progress">
+        <span class="progress-label" id="progress-label">Progresso Diário: 0%</span>
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill" id="progress-bar" style="width: 0%"></div>
+        </div>
+      </div>
+      <div class="top-bar-right">
+        <span class="date-display" id="date-display"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation Tabs -->
+  <nav class="nav-tabs" id="nav-tabs">
+    <button class="nav-tab active" data-tab="dashboard" onclick="switchTab('dashboard')">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Home</span>
+    </button>
+    <button class="nav-tab" data-tab="session" onclick="switchTab('session')">
+      <span class="nav-icon">🎮</span>
+      <span class="nav-label">Sessão</span>
+    </button>
+    <button class="nav-tab" data-tab="tilt" onclick="switchTab('tilt')">
+      <span class="nav-icon">🧠</span>
+      <span class="nav-label">Tilt</span>
+    </button>
+    <button class="nav-tab" data-tab="study" onclick="switchTab('study')">
+      <span class="nav-icon">📚</span>
+      <span class="nav-label">Estudo</span>
+    </button>
+    <button class="nav-tab" data-tab="spots" onclick="switchTab('spots')">
+      <span class="nav-icon">🔍</span>
+      <span class="nav-label">Spots</span>
+    </button>
+    <button class="nav-tab" data-tab="stats" onclick="switchTab('stats')">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">Stats</span>
+    </button>
+    <button class="nav-tab" data-tab="config" onclick="switchTab('config')">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">Config</span>
+    </button>
+  </nav>
+
+  <main class="container">
+
+    <!-- ============================================= -->
+    <!-- TAB: DASHBOARD (HOME) -->
+    <!-- ============================================= -->
+    <section id="dashboard-tab" class="tab-content active">
+
+      <div class="dash-header">
+        <h2>🏠 Dashboard</h2>
+        <p>Seu snapshot diário de grinder</p>
+      </div>
+
+      <!-- Main Metrics -->
+      <div class="dash-metrics-grid">
+        <div class="dash-metric-card glass-card">
+          <div class="dash-metric-icon">🔥</div>
+          <div class="dash-metric-value" id="dash-streak">0</div>
+          <div class="dash-metric-label">Streak (dias)</div>
+        </div>
+        <div class="dash-metric-card glass-card">
+          <div class="dash-metric-icon">🎯</div>
+          <div class="dash-metric-value" id="dash-avg-quality">—</div>
+          <div class="dash-metric-label">Decisão Média (7 últimas)</div>
+        </div>
+        <div class="dash-metric-card glass-card">
+          <div class="dash-metric-icon">🧠</div>
+          <div class="dash-metric-value" id="dash-tilt-count">0</div>
+          <div class="dash-metric-label">Tilts esta semana</div>
+        </div>
+        <div class="dash-metric-card glass-card">
+          <div class="dash-metric-icon">🃏</div>
+          <div class="dash-metric-value" id="dash-due-cards">0</div>
+          <div class="dash-metric-label">Flashcards pendentes</div>
+        </div>
+        <div class="dash-metric-card glass-card">
+          <div class="dash-metric-icon">🎮</div>
+          <div class="dash-metric-value" id="dash-total-sessions">0</div>
+          <div class="dash-metric-label">Total sessões</div>
+        </div>
+        <div class="dash-metric-card glass-card">
+          <div class="dash-metric-icon">⏱️</div>
+          <div class="dash-metric-value" id="dash-grind-hours">0h</div>
+          <div class="dash-metric-label">Horas grindadas</div>
+        </div>
+      </div>
+
+      <!-- Sparklines -->
+      <div class="dash-charts-row">
+        <div class="dash-chart-card glass-card">
+          <h3 class="section-title">📈 Qualidade de Decisão (14 últimas)</h3>
+          <div class="spark-container" id="dash-quality-spark"></div>
+        </div>
+        <div class="dash-chart-card glass-card">
+          <h3 class="section-title">📊 Sessões por Dia (14 dias)</h3>
+          <div class="spark-container" id="dash-session-spark"></div>
+        </div>
+      </div>
+
+      <!-- Badges -->
+      <div class="glass-card">
+        <h3 class="section-title">🏅 Conquistas</h3>
+        <div class="dash-badges" id="dash-badges"></div>
+      </div>
+
+    </section>
+
+    <!-- ============================================= -->
+    <!-- TAB: SESSÃO (GRIND) -->
+    <!-- ============================================= -->
+    <section id="session-tab" class="tab-content">
+
+      <!-- Dynamic Phrase Banner -->
+      <div class="logic-banner" id="logic-banner" onclick="cyclePhrase()">
+        <div class="phrase-category" id="phrase-category">📋 Intenção</div>
+        <p id="logic-phrase">"A variância é inevitável. Meu foco deve ser na qualidade das minhas decisões e em executar
+          a estratégia correta."</p>
+        <button class="phrase-cycle-btn" onclick="event.stopPropagation(); cyclePhrase()"
+          title="Próxima frase">🔄</button>
+      </div>
+      <div class="mantra-bar" id="mantra-bar" onclick="cycleMantra()">
+        <span class="mantra-icon">⚡</span>
+        <span id="mantra-text">Onde o vilão reage, eu crio.</span>
+      </div>
+
+      <!-- Session State Machine -->
+      <div class="session-phases">
+
+        <!-- Phase 1: Warm-Up -->
+        <div class="phase-card" id="phase-warmup">
+          <div class="phase-header">
+            <div class="phase-indicator warmup">
+              <span class="phase-number">1</span>
+            </div>
+            <div>
+              <h2 class="phase-title">Warm-Up</h2>
+              <p class="phase-subtitle">Revisar o C-Game antes de jogar</p>
+            </div>
+            <span class="phase-status" id="warmup-status">Pendente</span>
+          </div>
+          <div class="phase-body" id="warmup-body">
+            <p class="phase-instruction">Complete <strong>todos</strong> os itens antes de iniciar a sessão:</p>
+            <div class="checklist" id="warmup-checklist">
+              <label class="check-item">
+                <input type="checkbox" class="warmup-check" onchange="updateWarmup()">
+                <span class="checkmark"></span>
+                <span>Revisei meus principais leaks (C-Game)</span>
+              </label>
+              <label class="check-item">
+                <input type="checkbox" class="warmup-check" onchange="updateWarmup()">
+                <span class="checkmark"></span>
+                <span>Fiz drills de situações problemáticas</span>
+              </label>
+              <label class="check-item">
+                <input type="checkbox" class="warmup-check" onchange="updateWarmup()">
+                <span class="checkmark"></span>
+                <span>Estou emocionalmente estável para jogar</span>
+              </label>
+              <label class="check-item">
+                <input type="checkbox" class="warmup-check" onchange="updateWarmup()">
+                <span class="checkmark"></span>
+                <span>Configurei max 6 mesas / field reduzido</span>
+              </label>
+              <label class="check-item">
+                <input type="checkbox" class="warmup-check" onchange="updateWarmup()">
+                <span class="checkmark"></span>
+                <span>Li a frase de injeção de lógica</span>
+              </label>
+            </div>
+            <div class="session-goal-row">
+              <label class="form-label">⏱️ Meta de sessão:</label>
+              <select id="session-goal" class="session-goal-select">
+                <option value="0">Sem meta</option>
+                <option value="60">1 hora</option>
+                <option value="90">1h30</option>
+                <option value="120" selected>2 horas</option>
+                <option value="150">2h30</option>
+                <option value="180">3 horas</option>
+                <option value="240">4 horas</option>
+                <option value="300">5 horas</option>
+              </select>
+            </div>
+            <button class="btn btn-primary btn-large" id="start-session-btn" onclick="startSession()" disabled>
+              🔒 Complete o Warm-Up para iniciar
+            </button>
+          </div>
+        </div>
+
+        <!-- Phase 2: Foco na Sessão -->
+        <div class="phase-card locked" id="phase-focus">
+          <div class="phase-header">
+            <div class="phase-indicator focus">
+              <span class="phase-number">2</span>
+            </div>
+            <div>
+              <h2 class="phase-title">Foco na Sessão</h2>
+              <p class="phase-subtitle">Sem comentar erros — apenas marcar mãos</p>
+            </div>
+            <span class="phase-status" id="focus-status">🔒 Bloqueado</span>
+          </div>
+          <div class="phase-body hidden" id="focus-body">
+            <div class="session-timer-container">
+              <div class="session-timer" id="session-timer">00:00:00</div>
+              <div class="timer-controls">
+                <button class="btn btn-secondary" id="pause-btn" onclick="togglePause()">⏸️ Pausar</button>
+                <button class="btn btn-danger" id="end-session-btn" onclick="endSession()">⏹️ Encerrar Sessão</button>
+              </div>
+            </div>
+            <div class="session-rules">
+              <div class="rule-card">
+                <span class="rule-icon">🚫</span>
+                <span>NÃO comente erros dos oponentes</span>
+              </div>
+              <div class="rule-card">
+                <span class="rule-icon">📝</span>
+                <span>Marque mãos para revisão posterior</span>
+              </div>
+              <div class="rule-card">
+                <span class="rule-icon">🧘</span>
+                <span>Pense em cada detalhe da mão</span>
+              </div>
+              <div class="rule-card">
+                <span class="rule-icon">6️⃣</span>
+                <span>Máximo 6 mesas simultâneas</span>
+              </div>
+            </div>
+            <!-- Randomizer Widget -->
+            <div class="randomizer-widget">
+              <h3>🎲 Randomizador de Frequência</h3>
+              <div class="randomizer-display">
+                <div class="randomizer-number" id="randomizer-number">—</div>
+                <div class="randomizer-bar">
+                  <div class="randomizer-bar-fill" id="randomizer-bar-fill" style="width: 0%"></div>
+                </div>
+              </div>
+              <button class="btn btn-accent btn-large" id="randomize-btn" onclick="randomize()">
+                ▶️ Iniciar Randomizador
+              </button>
+              <div class="randomizer-speed">
+                <label>Velocidade:</label>
+                <input type="range" min="500" max="5000" step="250" value="2000"
+                  oninput="updateRandomizerSpeed(parseInt(this.value))">
+                <span class="speed-label">2s</span>
+              </div>
+              <p class="randomizer-hint">Muda automaticamente • Use para decidir ações com frequência mista (ex: bluff
+                30% → se ≤ 30, bluff)</p>
+            </div>
+            <div class="hand-marker">
+              <h3>📌 Marcar Mão</h3>
+              <textarea id="hand-note" class="text-input" placeholder="Descreva a mão para revisão posterior..."
+                rows="3"></textarea>
+              <button class="btn btn-accent" onclick="markHand()">+ Marcar Mão</button>
+              <div id="marked-hands-list" class="marked-hands"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Phase 3: Cool-Down -->
+        <div class="phase-card locked" id="phase-cooldown">
+          <div class="phase-header">
+            <div class="phase-indicator cooldown">
+              <span class="phase-number">3</span>
+            </div>
+            <div>
+              <h2 class="phase-title">Cool-Down</h2>
+              <p class="phase-subtitle">Avaliar a qualidade das decisões</p>
+            </div>
+            <span class="phase-status" id="cooldown-status">🔒 Bloqueado</span>
+          </div>
+          <div class="phase-body hidden" id="cooldown-body">
+            <div class="cooldown-form">
+              <div class="rating-group">
+                <label class="rating-label">Qualidade das Decisões (1-10)</label>
+                <div class="rating-slider">
+                  <input type="range" id="decision-quality" min="1" max="10" value="5" oninput="updateRatingDisplay()">
+                  <span class="rating-value" id="rating-value">5</span>
+                </div>
+              </div>
+              <div class="rating-group">
+                <label class="rating-label">Consegui seguir o plano?</label>
+                <div class="plan-adherence">
+                  <button class="adherence-btn" data-value="sim" onclick="setAdherence('sim')">✅ Sim</button>
+                  <button class="adherence-btn" data-value="parcial" onclick="setAdherence('parcial')">⚠️
+                    Parcial</button>
+                  <button class="adherence-btn" data-value="nao" onclick="setAdherence('nao')">❌ Não</button>
+                </div>
+              </div>
+              <div class="rating-group">
+                <label class="rating-label">Notas da Sessão</label>
+                <textarea id="session-notes" class="text-input" placeholder="O que aconteceu? O que posso melhorar?"
+                  rows="4"></textarea>
+              </div>
+              <button class="btn btn-primary btn-large" onclick="saveCooldown()">💾 Salvar e Finalizar Sessão</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Session History -->
+      <div class="history-section">
+        <h3 class="section-title">📊 Histórico de Sessões</h3>
+        <div class="glass-card" style="margin-bottom: var(--space-md)">
+          <h4 class="section-title">📈 Tendência de Qualidade (últimas 20)</h4>
+          <div class="spark-container" id="quality-trend-spark"></div>
+        </div>
+        <div id="session-history" class="history-list">
+          <p class="empty-state">Nenhuma sessão registrada ainda.</p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ============================================= -->
+    <!-- TAB: TILT -->
+    <!-- ============================================= -->
+    <section id="tilt-tab" class="tab-content">
+
+      <!-- Always-visible Logic Injection -->
+      <div class="tilt-hero">
+        <div class="tilt-hero-icon">🧠</div>
+        <h2>Controle de Tilt</h2>
+        <p class="tilt-mantra" id="tilt-mantra">"A variância é inevitável. Meu foco deve ser na qualidade das minhas
+          decisões e em executar a estratégia correta."</p>
+      </div>
+
+      <!-- Breathing Exercise -->
+      <div class="glass-card">
+        <h3 class="section-title">🌬️ Exercício de Respiração</h3>
+        <p class="section-desc">Quando sentir os primeiros sinais de tilt, faça este exercício:</p>
+        <div class="breathing-exercise">
+          <div class="breath-circle" id="breath-circle">
+            <span id="breath-text">Iniciar</span>
+          </div>
+          <button class="btn btn-accent" id="breath-btn" onclick="startBreathing()">▶️ Começar Respiração</button>
+        </div>
+      </div>
+
+      <!-- Tilt Signs Checklist -->
+      <div class="glass-card">
+        <h3 class="section-title">⚠️ Reconhecer Sinais de Tilt</h3>
+        <p class="section-desc">Marque os sinais que está sentindo agora:</p>
+        <div class="tilt-signs" id="tilt-signs">
+          <label class="check-item tilt-sign">
+            <input type="checkbox" class="tilt-check">
+            <span class="checkmark"></span>
+            <span>Irritação com bad beats</span>
+          </label>
+          <label class="check-item tilt-sign">
+            <input type="checkbox" class="tilt-check">
+            <span class="checkmark"></span>
+            <span>Jogando muitas mãos (loose demais)</span>
+          </label>
+          <label class="check-item tilt-sign">
+            <input type="checkbox" class="tilt-check">
+            <span class="checkmark"></span>
+            <span>Fazendo calls ruins por frustração</span>
+          </label>
+          <label class="check-item tilt-sign">
+            <input type="checkbox" class="tilt-check">
+            <span class="checkmark"></span>
+            <span>Over-bluffing por raiva</span>
+          </label>
+          <label class="check-item tilt-sign">
+            <input type="checkbox" class="tilt-check">
+            <span class="checkmark"></span>
+            <span>Pensamento: "preciso recuperar"</span>
+          </label>
+          <label class="check-item tilt-sign">
+            <input type="checkbox" class="tilt-check">
+            <span class="checkmark"></span>
+            <span>Coração acelerado / tensão no corpo</span>
+          </label>
+          <label class="check-item tilt-sign">
+            <input type="checkbox" class="tilt-check">
+            <span class="checkmark"></span>
+            <span>Subindo de stake para "recuperar"</span>
+          </label>
+        </div>
+        <div class="tilt-warning hidden" id="tilt-warning">
+          <div class="tilt-alert">
+            🚨 <strong>ALERTA DE TILT!</strong> Você marcou sinais de tilt.
+            <br>Faça o exercício de respiração e releia a frase de lógica.
+            <br>Se necessário, <strong>PARE DE JOGAR</strong>.
+          </div>
+        </div>
+        <button class="btn btn-secondary" onclick="logTiltEpisode()">📝 Registrar Episódio de Tilt</button>
+      </div>
+
+      <!-- Tilt History -->
+      <div class="glass-card">
+        <h3 class="section-title">📊 Histórico de Tilt</h3>
+        <div id="tilt-history" class="history-list">
+          <p class="empty-state">Nenhum episódio registrado.</p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ============================================= -->
+    <!-- TAB: ESTUDO -->
+    <!-- ============================================= -->
+    <section id="study-tab" class="tab-content">
+
+      <div class="study-header">
+        <h2>📚 Plano de Correção de Leaks</h2>
+        <p>Plano de 12 semanas baseado nos seus leaks (C-Game)</p>
+      </div>
+
+      <!-- Plan Controls -->
+      <div class="glass-card plan-controls-card">
+        <div class="plan-controls">
+          <button class="btn btn-primary btn-large" id="generate-plan-btn" onclick="generateStudyPlan()">
+            🔄 Gerar Plano de 12 Semanas
+          </button>
+          <span class="plan-status" id="plan-status"></span>
+        </div>
+      </div>
+
+      <!-- 12-Week Progress Dots -->
+      <div class="glass-card week-progress-card" id="week-progress-card" style="display:none;">
+        <h3 class="section-title">📅 Progresso das 12 Semanas</h3>
+        <div class="week-dots" id="week-dots"></div>
+      </div>
+
+      <!-- Current Week Banner -->
+      <div class="week-banner" id="week-banner" style="display:none;">
+        <div class="week-banner-nav">
+          <button class="week-nav-btn" onclick="navigateWeek(-1)" id="week-prev-btn">◀</button>
+          <div class="week-banner-center">
+            <div class="week-number" id="week-number">Semana 1</div>
+            <div class="week-category" id="week-category">Pre Flop</div>
+          </div>
+          <button class="week-nav-btn" onclick="navigateWeek(1)" id="week-next-btn">▶</button>
+        </div>
+        <div class="week-alert" id="week-alert"></div>
+      </div>
+
+      <!-- Week Leaks & Checklists -->
+      <div id="week-leaks-container"></div>
+
+      <!-- Weekly Progress -->
+      <div class="glass-card" id="week-study-progress" style="display:none;">
+        <h3 class="section-title">📊 Progresso da Semana</h3>
+        <div class="study-progress">
+          <div class="progress-bar-container large">
+            <div class="progress-bar-fill study-fill" id="study-progress-bar" style="width: 0%"></div>
+          </div>
+          <span class="progress-text" id="study-progress-text">0/0 tarefas</span>
+        </div>
+      </div>
+
+      <!-- Study History -->
+      <div class="glass-card">
+        <h3 class="section-title">📊 Histórico de Estudo</h3>
+        <div id="study-history" class="history-list">
+          <p class="empty-state">Nenhum estudo registrado ainda.</p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ============================================= -->
+    <!-- TAB: SPOTS -->
+    <!-- ============================================= -->
+    <section id="spots-tab" class="tab-content">
+
+      <div class="spots-header">
+        <h2>🔍 Análise de Spots</h2>
+        <p>Para cada spot, responda às 5 perguntas:</p>
+      </div>
+
+      <!-- New Spot Form -->
+      <div class="glass-card">
+        <h3 class="section-title">➕ Novo Spot</h3>
+        <div class="spot-form">
+          <div class="form-group">
+            <label class="form-label">Nome do Spot</label>
+            <input type="text" id="spot-name" class="text-input" placeholder="Ex: SB vs BTN 3bet pot, flop cbet OOP...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">1. Como estou jogando o spot?</label>
+            <textarea id="spot-q1" class="text-input" placeholder="Descreva como você joga atualmente..."
+              rows="3"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">2. Como a Teoria joga o spot?</label>
+            <textarea id="spot-q2" class="text-input" placeholder="O que o GTO/teoria diz sobre esse spot..."
+              rows="3"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">3. Como a pop joga?</label>
+            <textarea id="spot-q3" class="text-input" placeholder="Tendências da população nesse spot..."
+              rows="3"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">4. Como jogar com Nodelock?</label>
+            <textarea id="spot-q4" class="text-input" placeholder="Ajustes com node lock baseados na pop..."
+              rows="3"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">5. Treinar o spot no solver</label>
+            <textarea id="spot-q5" class="text-input" placeholder="Resultados e observações do treino no solver..."
+              rows="3"></textarea>
+          </div>
+          <div class="spot-checklist">
+            <label class="check-item">
+              <input type="checkbox" id="spot-trained">
+              <span class="checkmark"></span>
+              <span>✅ Spot treinado no solver</span>
+            </label>
+          </div>
+          <div class="form-group">
+            <label class="form-label">🏷️ Tags</label>
+            <div class="spot-tag-grid">
+              <label class="spot-tag-label"><input type="checkbox" class="spot-tag-check" value="3bet Pot"> 3bet
+                Pot</label>
+              <label class="spot-tag-label"><input type="checkbox" class="spot-tag-check" value="Squeeze">
+                Squeeze</label>
+              <label class="spot-tag-label"><input type="checkbox" class="spot-tag-check" value="Blind Defense"> Blind
+                Defense</label>
+              <label class="spot-tag-label"><input type="checkbox" class="spot-tag-check" value="ICM"> ICM</label>
+              <label class="spot-tag-label"><input type="checkbox" class="spot-tag-check" value="Multiway">
+                Multiway</label>
+              <label class="spot-tag-label"><input type="checkbox" class="spot-tag-check" value="Heads-Up">
+                Heads-Up</label>
+              <label class="spot-tag-label"><input type="checkbox" class="spot-tag-check" value="Draw Heavy"> Draw
+                Heavy</label>
+              <label class="spot-tag-label"><input type="checkbox" class="spot-tag-check" value="River Play"> River
+                Play</label>
+              <label class="spot-tag-label"><input type="checkbox" class="spot-tag-check" value="Bluff Spot"> Bluff
+                Spot</label>
+              <label class="spot-tag-label"><input type="checkbox" class="spot-tag-check" value="Value Bet"> Value
+                Bet</label>
+              <label class="spot-tag-label"><input type="checkbox" class="spot-tag-check" value="Check-Raise">
+                Check-Raise</label>
+              <label class="spot-tag-label"><input type="checkbox" class="spot-tag-check" value="C-Bet"> C-Bet</label>
+              <label class="spot-tag-label"><input type="checkbox" class="spot-tag-check" value="Fold Decision"> Fold
+                Decision</label>
+              <label class="spot-tag-label"><input type="checkbox" class="spot-tag-check" value="Sizing"> Sizing</label>
+              <label class="spot-tag-label"><input type="checkbox" class="spot-tag-check" value="Short Stack"> Short
+                Stack</label>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-large" onclick="saveSpot()">💾 Salvar Spot</button>
+        </div>
+      </div>
+
+      <!-- Flashcard Review -->
+      <div class="glass-card flashcard-section">
+        <div class="flashcard-header">
+          <h3 class="section-title">🃏 Revisão de Spots (Flashcards)</h3>
+          <div class="flashcard-meta">
+            <span class="fc-due-count" id="fc-due-count">0 para revisar</span>
+            <span class="fc-schedule-info" id="fc-schedule-info"></span>
+          </div>
+        </div>
+
+        <!-- No reviews due -->
+        <div id="fc-empty" class="fc-empty-state">
+          <p>✅ Nenhum spot para revisar agora!</p>
+          <p class="fc-next-info" id="fc-next-info"></p>
+        </div>
+
+        <!-- Flashcard Container -->
+        <div id="fc-card-container" class="fc-card-container" style="display:none;">
+          <div class="fc-progress-row">
+            <span id="fc-progress-text">1 / 5</span>
+            <span class="fc-interval-badge" id="fc-interval-badge"></span>
+          </div>
+
+          <div class="fc-card" id="fc-card" onclick="flipFlashcard()">
+            <div class="fc-card-inner" id="fc-card-inner">
+              <!-- Front -->
+              <div class="fc-card-front">
+                <div class="fc-card-label">SPOT</div>
+                <div class="fc-card-title" id="fc-card-title"></div>
+                <div class="fc-card-hint">Clique para ver a resposta</div>
+              </div>
+              <!-- Back -->
+              <div class="fc-card-back">
+                <div class="fc-card-answers" id="fc-card-answers"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rating Buttons -->
+          <div class="fc-rating-buttons" id="fc-rating-buttons" style="display:none;">
+            <p class="fc-rating-label">Como foi sua lembrança?</p>
+            <div class="fc-btn-row">
+              <button class="btn fc-btn fc-btn-again" onclick="rateFlashcard('again')">
+                ❌ Erro
+                <span class="fc-btn-sub">Resetar p/ 1 dia</span>
+              </button>
+              <button class="btn fc-btn fc-btn-hard" onclick="rateFlashcard('hard')">
+                😤 Difícil
+                <span class="fc-btn-sub" id="fc-hint-hard">1.5x intervalo</span>
+              </button>
+              <button class="btn fc-btn fc-btn-good" onclick="rateFlashcard('good')">
+                🤔 Bom
+                <span class="fc-btn-sub" id="fc-hint-good">Curva padrão</span>
+              </button>
+              <button class="btn fc-btn fc-btn-easy" onclick="rateFlashcard('easy')">
+                😎 Fácil
+                <span class="fc-btn-sub" id="fc-hint-easy">Pular etapas</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-accent btn-large" id="fc-start-btn" onclick="startFlashcardReview()"
+          style="display:none;">
+          🃏 Iniciar Revisão
+        </button>
+      </div>
+
+      <!-- Saved Spots -->
+      <div class="glass-card">
+        <h3 class="section-title">📋 Spots Salvos</h3>
+        <div class="spot-tag-filters" id="spot-tag-filters"></div>
+        <input type="text" id="spot-search" class="text-input search-input" placeholder="🔎 Buscar spots..."
+          oninput="filterSpots()">
+        <div id="spots-list" class="spots-grid">
+          <p class="empty-state">Nenhum spot salvo ainda.</p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ============================================= -->
+    <!-- TAB: CONFIG -->
+    <!-- ============================================= -->
+    <section id="config-tab" class="tab-content">
+
+      <div class="config-header">
+        <h2>⚙️ Configurações & Variância</h2>
+        <p>Gerenciamento da variância e diário</p>
+      </div>
+
+      <!-- Variance Settings -->
+      <div class="glass-card">
+        <h3 class="section-title">📉 Controle de Variância</h3>
+        <div class="variance-settings">
+          <div class="setting-row">
+            <div class="setting-info">
+              <label class="setting-label">Tamanho Máximo do Field</label>
+              <p class="setting-desc">Diminuir o field para reduzir a variância</p>
+            </div>
+            <input type="number" id="max-field" class="setting-input" value="100" min="1" onchange="saveConfig()">
+          </div>
+          <div class="setting-row">
+            <div class="setting-info">
+              <label class="setting-label">Número Máximo de Mesas</label>
+              <p class="setting-desc">Meta: 6 telas para sair do piloto automático</p>
+            </div>
+            <input type="number" id="max-tables" class="setting-input" value="6" min="1" max="24"
+              onchange="saveConfig()">
+          </div>
+          <div class="setting-row setting-row-full">
+            <div class="setting-info">
+              <label class="setting-label">🧠 Frases de Injeção de Lógica</label>
+              <p class="setting-desc">Adicione frases que aparecem durante a sessão. Elas são injetadas junto com as
+                frases base do sistema.</p>
+              <span class="phrase-count" id="phrase-total-count"></span>
+            </div>
+          </div>
+
+          <!-- Add Phrase Form -->
+          <div class="custom-phrase-form">
+            <div class="custom-phrase-row">
+              <select id="custom-phrase-category" class="text-input custom-phrase-select">
+                <option value="intencao">🎯 Intenção e Agressividade</option>
+                <option value="automatico">🔥 Quebrando o Automático</option>
+                <option value="esforco">💪 Esforço Cognitivo</option>
+                <option value="mantra">⚡ Mantra</option>
+              </select>
+              <textarea id="custom-phrase-text" class="text-input custom-phrase-input"
+                placeholder="Digite sua frase de injeção de lógica..." rows="2"></textarea>
+              <button class="btn btn-accent" onclick="
+                const cat = document.getElementById('custom-phrase-category').value;
+                if (cat === 'mantra') { addCustomMantra(); }
+                else { addCustomPhrase(); }
+              ">+ Adicionar</button>
+            </div>
+          </div>
+
+          <!-- Custom Phrases List -->
+          <div id="custom-phrases-list" class="custom-phrases-list">
+            <p class="empty-state">Nenhuma frase personalizada ainda.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Daily Journal -->
+      <div class="glass-card">
+        <h3 class="section-title">📓 Diário</h3>
+        <div class="journal-entry">
+          <textarea id="journal-text" class="text-input journal-textarea"
+            placeholder="Escreva suas reflexões do dia, insights, sentimentos sobre o grind..." rows="6"></textarea>
+          <button class="btn btn-accent" onclick="saveJournalEntry()">📝 Salvar Entrada</button>
+        </div>
+        <div id="journal-history" class="history-list">
+          <p class="empty-state">Nenhuma entrada no diário.</p>
+        </div>
+      </div>
+
+      <!-- Data Management -->
+      <div class="glass-card">
+        <h3 class="section-title">💾 Gerenciamento de Dados</h3>
+        <div class="data-actions">
+          <button class="btn btn-secondary" onclick="exportAllData()">📥 Exportar Dados (JSON)</button>
+          <label class="btn btn-secondary">
+            📤 Importar Dados
+            <input type="file" id="import-file" accept=".json" onchange="importData(event)" style="display:none">
+          </label>
+          <button class="btn btn-danger" onclick="clearAllData()">🗑️ Limpar Todos os Dados</button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ============================================= -->
+    <!-- TAB: STATS -->
+    <!-- ============================================= -->
+    <section id="stats-tab" class="tab-content">
+
+      <div class="stats-page-header">
+        <h2>📊 Minhas Estatísticas</h2>
+        <p>Acompanhe suas stats e identifique A-Game, B-Game e C-Game</p>
+      </div>
+
+      <!-- Legend -->
+      <div class="glass-card stats-legend">
+        <div class="legend-item">
+          <span class="legend-dot agame-dot"></span>
+          <span><strong>A-Game</strong> — No target ou acima</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot bgame-dot"></span>
+          <span><strong>B-Game</strong> — Perto do target (desvio pequeno)</span>
+        </div>
+        <div class="legend-item">
+          <span class="legend-dot cgame-dot"></span>
+          <span><strong>C-Game</strong> — Longe do target (leak)</span>
+        </div>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="stats-summary-grid" id="stats-summary"></div>
+      <!-- Category Filter Chips -->
+      <div class="category-filter-chips" id="category-chips"></div>
+
+      <!-- Stats Table -->
+      <div class="glass-card">
+        <h3 class="section-title">📋 Tabela de Stats</h3>
+        <div class="stats-table-wrapper">
+          <table class="stats-table" id="stats-table">
+            <thead>
+              <tr>
+                <th>Stat</th>
+                <th>Target Ideal</th>
+                <th>Minha Stat</th>
+                <th>Desvio</th>
+                <th>Game</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="stats-tbody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Add New Stat -->
+      <div class="glass-card">
+        <h3 class="section-title">➕ Adicionar Nova Stat</h3>
+        <div class="add-stat-form">
+          <div class="add-stat-row">
+            <input type="text" id="new-stat-name" class="text-input"
+              placeholder="Nome da stat (ex: VPIP, PFR, 3Bet...)">
+            <select id="new-stat-category" class="text-input stat-cat-select">
+              <option value="">Categoria...</option>
+            </select>
+            <input type="number" id="new-stat-target" class="text-input stat-num-input" placeholder="Target" step="0.1">
+            <input type="number" id="new-stat-value" class="text-input stat-num-input" placeholder="Minha stat"
+              step="0.1">
+            <button class="btn btn-primary" onclick="addNewStat()">+ Adicionar</button>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script src="js/app.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/session.js"></script>
+  <script src="js/tilt.js"></script>
+  <script src="js/stats.js"></script>
+  <script src="js/study.js"></script>
+  <script src="js/spots.js"></script>
+  <script src="js/config.js"></script>
+
+  <!-- Floating Randomizer Button -->
+  <button class="floating-randomizer" id="floating-randomizer" onclick="toggleFloatingRandomizer()"
+    title="Randomizador">
+    🎲
+  </button>
+  <!-- Theme & Sound Toggle Buttons -->
+  <button class="theme-toggle-btn" id="theme-toggle" onclick="toggleTheme()" title="Alternar tema">☀️</button>
+  <button class="theme-toggle-btn" id="sound-toggle" onclick="toggleSound()" title="Alternar som"
+    style="bottom: 130px">🔊</button>
+
+  <div class="floating-randomizer-panel hidden" id="floating-randomizer-panel">
+    <div class="frp-header">
+      <span>🎲 Randomizador</span>
+      <button class="frp-close" onclick="toggleFloatingRandomizer()">✕</button>
+    </div>
+    <div class="randomizer-display">
+      <div class="randomizer-number" id="floating-random-number">—</div>
+      <div class="randomizer-bar">
+        <div class="randomizer-bar-fill" id="floating-random-bar" style="width: 0%"></div>
+      </div>
+    </div>
+    <div class="frp-controls">
+      <button class="btn btn-accent" id="floating-rand-toggle" onclick="toggleFloatingRand()">⏸️ Pausar</button>
+      <div class="randomizer-speed compact">
+        <label>⚡</label>
+        <input type="range" min="500" max="5000" step="250" value="2000" oninput="setFloatingSpeed(this.value)">
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => { });
+      });
+    }
+  </script>
+</body>
+
+</html>
