@@ -101,20 +101,14 @@ function importData(event) {
             if (data.config) state.config = { ...state.config, ...data.config };
             if (data.agameNotes !== undefined) state.agameNotes = data.agameNotes;
             if (data.cgameNotes !== undefined) state.cgameNotes = data.cgameNotes;
+            if (data.playerStats) state.playerStats = data.playerStats;
+            if (data.studyPlan !== undefined) state.studyPlan = data.studyPlan;
+            if (data.studyPlanArchive) state.studyPlanArchive = data.studyPlanArchive;
 
             saveState();
 
-            // Re-init everything
-            initSession();
-            initTilt();
-            initStudy();
-            initSpots();
-            initConfig();
-            if (typeof initStats === 'function') initStats();
-            if (typeof initDashboard === 'function') initDashboard();
-            updateDailyProgress();
-
-            alert('✅ Dados importados com sucesso!');
+            alert('✅ Dados importados com sucesso! A página vai recarregar.');
+            location.reload();
         } catch (err) {
             alert('❌ Erro ao importar dados: ' + err.message);
         }
