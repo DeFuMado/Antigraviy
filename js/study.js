@@ -449,36 +449,67 @@ function renderWeekLeaks(week, weekIdx) {
     const container = document.getElementById('week-leaks-container');
     if (!container) return;
 
+    // Action bar for adding topics/spots
+    const spotsOptions = (state.spots || []).map(s =>
+        `<option value="${s.id}">${escapeHtml(s.name)}</option>`
+    ).join('');
+
+    const addBarHTML = `
+      <div class="week-add-actions">
+        <button class="btn btn-accent" onclick="showAddLeakForm(${weekIdx})">➕ Adicionar Tópico</button>
+        ${spotsOptions ? `
+          <div class="spot-add-group">
+            <select id="spot-select-${weekIdx}" class="text-input spot-select-dropdown">
+              <option value="">🔍 Adicionar Spot...</option>
+              ${spotsOptions}
+            </select>
+            <button class="btn btn-secondary" onclick="addSpotToWeek(${weekIdx})">+ Spot</button>
+          </div>
+        ` : ''}
+      </div>
+      <div class="add-leak-form hidden" id="add-leak-form-${weekIdx}">
+        <input type="text" id="add-leak-input-${weekIdx}" class="text-input" placeholder="Nome do tópico de estudo...">
+        <div class="add-leak-form-btns">
+          <button class="btn btn-primary" onclick="confirmAddLeak(${weekIdx})">✅ Adicionar</button>
+          <button class="btn" onclick="hideAddLeakForm(${weekIdx})">Cancelar</button>
+        </div>
+      </div>
+    `;
+
     if (!week.leaks || week.leaks.length === 0) {
-        container.innerHTML = '<div class="glass-card"><p class="empty-state">Nenhum leak atribuído a esta semana.</p></div>';
+        container.innerHTML = addBarHTML + '<div class="glass-card"><p class="empty-state">Nenhum leak atribuído a esta semana. Use os botões acima para adicionar.</p></div>';
         return;
     }
 
-    container.innerHTML = week.leaks.map(leak => {
+    container.innerHTML = addBarHTML + week.leaks.map(leak => {
         const gk = leak.groupKey;
         const leakChecklist = week.checklist[gk] || {};
         const leakNotes = (week.notes && week.notes[gk]) || {};
+        const isCustom = leak.isCustom || false;
 
-        // Render individual stats table within the group
-        const statsTableHTML = leak.stats.map(stat => {
-            const currentStat = (state.playerStats || []).find(s => s.id === stat.statId);
-            const currentValue = currentStat ? currentStat.value : stat.value;
-            const currentDev = currentStat ? (currentStat.value - stat.target) : stat.deviation;
-            const devSign = currentDev >= 0 ? '+' : '';
-            const currentGame = currentStat ? getGameLabel(currentStat.game) : null;
+        // Render individual stats table within the group (skip for custom topics)
+        let statsTableHTML = '';
+        if (!isCustom && leak.stats && leak.stats.length > 0) {
+            statsTableHTML = leak.stats.map(stat => {
+                const currentStat = (state.playerStats || []).find(s => s.id === stat.statId);
+                const currentValue = currentStat ? currentStat.value : stat.value;
+                const currentDev = currentStat ? (currentStat.value - stat.target) : stat.deviation;
+                const devSign = currentDev >= 0 ? '+' : '';
+                const currentGame = currentStat ? getGameLabel(currentStat.game) : null;
 
-            return `
-            <tr class="leak-stat-row">
-              <td class="leak-stat-name">${escapeHtml(stat.name)}</td>
-              <td class="leak-stat-target">${stat.target}</td>
-              <td class="leak-stat-current cgame">${currentValue}</td>
-              <td class="leak-stat-dev cgame">${devSign}${currentDev.toFixed(1)}</td>
-              ${currentGame ? `<td class="leak-stat-game">${currentGame.emoji}</td>` : '<td></td>'}
-            </tr>`;
-        }).join('');
+                return `
+                <tr class="leak-stat-row">
+                  <td class="leak-stat-name">${escapeHtml(stat.name)}</td>
+                  <td class="leak-stat-target">${stat.target}</td>
+                  <td class="leak-stat-current cgame">${currentValue}</td>
+                  <td class="leak-stat-dev cgame">${devSign}${currentDev.toFixed(1)}</td>
+                  ${currentGame ? `<td class="leak-stat-game">${currentGame.emoji}</td>` : '<td></td>'}
+                </tr>`;
+            }).join('');
+        }
 
         // Safe groupKey for inline JS (encode for use in function calls)
-        const gkSafe = gk.replace(/'/g, "\\'");
+        const gkSafe = gk.replace(/'/g, "\\'")
 
         const checklistHTML = STUDY_CHECKLIST_TASKS.map(task => {
             const checked = leakChecklist[task.key] ? 'checked' : '';
@@ -515,24 +546,12 @@ function renderWeekLeaks(week, weekIdx) {
         const totalTasks = STUDY_CHECKLIST_TASKS.length;
         const leakPct = Math.round((completedTasks / totalTasks) * 100);
         const progressCls = leakPct === 100 ? 'completed' : leakPct > 0 ? 'in-progress' : '';
-        const groupIcon = leak.isGroup ? '📦' : '🔴';
-        const statCount = leak.stats.length;
+        const groupIcon = isCustom ? '📌' : (leak.isGroup ? '📦' : '🔴');
+        const statCount = leak.stats ? leak.stats.length : 0;
         const cardId = `leak-body-${weekIdx}-${gk}`;
 
-        return `
-      <div class="glass-card leak-card ${progressCls}">
-        <div class="leak-card-header" onclick="toggleLeakCard('${cardId}', this)" style="cursor:pointer;">
-          <div class="leak-info">
-            <h4 class="leak-name">${groupIcon} ${escapeHtml(leak.groupLabel)}</h4>
-            <span class="leak-category-tag">${getCategoryLabelForPlan(leak.category)}${leak.isGroup ? ` · ${statCount} stats` : ''}</span>
-          </div>
-          <div class="leak-header-right">
-            <span class="leak-progress-badge">${completedTasks}/${totalTasks}</span>
-            <span class="leak-toggle-icon">▶</span>
-          </div>
-        </div>
-
-        <!-- Stats Detail Table (always visible) -->
+        // Stats table section (only for non-custom leaks with stats)
+        const statsSection = statsTableHTML ? `
         <div class="leak-stats-table-wrap">
           <table class="leak-stats-table">
             <thead>
@@ -546,7 +565,24 @@ function renderWeekLeaks(week, weekIdx) {
             </thead>
             <tbody>${statsTableHTML}</tbody>
           </table>
+        </div>` : '';
+
+        return `
+      <div class="glass-card leak-card ${progressCls}">
+        <div class="leak-card-header" onclick="toggleLeakCard('${cardId}', this)" style="cursor:pointer;">
+          <div class="leak-info">
+            <h4 class="leak-name" id="leak-name-${weekIdx}-${gkSafe}">${groupIcon} ${escapeHtml(leak.groupLabel)}</h4>
+            <span class="leak-category-tag">${isCustom ? '📌 Tópico personalizado' : getCategoryLabelForPlan(leak.category)}${!isCustom && leak.isGroup ? ` · ${statCount} stats` : ''}</span>
+          </div>
+          <div class="leak-header-right">
+            <button class="btn-icon leak-edit-btn" onclick="event.stopPropagation(); editLeakName(${weekIdx}, '${gkSafe}')" title="Editar nome">✏️</button>
+            <button class="btn-icon leak-remove-btn" onclick="event.stopPropagation(); removeLeakFromWeek(${weekIdx}, '${gkSafe}')" title="Remover">🗑️</button>
+            <span class="leak-progress-badge">${completedTasks}/${totalTasks}</span>
+            <span class="leak-toggle-icon">▶</span>
+          </div>
         </div>
+
+        ${statsSection}
 
         <!-- Collapsible study section -->
         <div class="leak-card-body hidden" id="${cardId}">
@@ -811,6 +847,139 @@ function restoreArchivedWeek(calendarWeek) {
     viewingWeek = 0;
     renderPlanUI();
     renderStudyHistory();
+}
+
+// ---- Edit Plan: Remove Leak ----
+function removeLeakFromWeek(weekIdx, groupKey) {
+    const plan = state.studyPlan;
+    if (!plan || !plan.weeks[weekIdx]) return;
+    if (!confirm('Remover este tópico da semana?')) return;
+
+    const week = plan.weeks[weekIdx];
+    week.leaks = week.leaks.filter(l => l.groupKey !== groupKey);
+    delete week.checklist[groupKey];
+    if (week.notes) delete week.notes[groupKey];
+
+    saveState();
+    renderWeekLeaks(week, weekIdx);
+    renderWeekDots();
+    updateWeeklyProgressBar();
+}
+
+// ---- Edit Plan: Edit Leak Name ----
+function editLeakName(weekIdx, groupKey) {
+    const plan = state.studyPlan;
+    if (!plan || !plan.weeks[weekIdx]) return;
+
+    const week = plan.weeks[weekIdx];
+    const leak = week.leaks.find(l => l.groupKey === groupKey);
+    if (!leak) return;
+
+    const newName = prompt('Novo nome do tópico:', leak.groupLabel);
+    if (newName === null || !newName.trim()) return;
+
+    leak.groupLabel = newName.trim();
+    saveState();
+    renderWeekLeaks(week, weekIdx);
+}
+
+// ---- Edit Plan: Add Custom Topic ----
+function showAddLeakForm(weekIdx) {
+    const form = document.getElementById('add-leak-form-' + weekIdx);
+    if (form) {
+        form.classList.remove('hidden');
+        const input = document.getElementById('add-leak-input-' + weekIdx);
+        if (input) input.focus();
+    }
+}
+
+function hideAddLeakForm(weekIdx) {
+    const form = document.getElementById('add-leak-form-' + weekIdx);
+    if (form) form.classList.add('hidden');
+    const input = document.getElementById('add-leak-input-' + weekIdx);
+    if (input) input.value = '';
+}
+
+function confirmAddLeak(weekIdx) {
+    const plan = state.studyPlan;
+    if (!plan || !plan.weeks[weekIdx]) return;
+
+    const input = document.getElementById('add-leak-input-' + weekIdx);
+    const name = input ? input.value.trim() : '';
+    if (!name) { alert('Digite o nome do tópico!'); return; }
+
+    const week = plan.weeks[weekIdx];
+    const gk = 'custom_' + Date.now();
+
+    week.leaks.push({
+        groupKey: gk,
+        groupLabel: name,
+        isGroup: false,
+        isCustom: true,
+        stats: [],
+        category: 'all'
+    });
+
+    // Initialize checklist and notes
+    week.checklist[gk] = {};
+    if (!week.notes) week.notes = {};
+    week.notes[gk] = {};
+    STUDY_CHECKLIST_TASKS.forEach(t => {
+        week.checklist[gk][t.key] = false;
+        week.notes[gk][t.key] = '';
+    });
+
+    saveState();
+    hideAddLeakForm(weekIdx);
+    renderWeekLeaks(week, weekIdx);
+    renderWeekDots();
+    updateWeeklyProgressBar();
+}
+
+// ---- Edit Plan: Add Spot to Week ----
+function addSpotToWeek(weekIdx) {
+    const plan = state.studyPlan;
+    if (!plan || !plan.weeks[weekIdx]) return;
+
+    const select = document.getElementById('spot-select-' + weekIdx);
+    if (!select || !select.value) { alert('Selecione um spot!'); return; }
+
+    const spotId = parseInt(select.value);
+    const spot = (state.spots || []).find(s => s.id === spotId);
+    if (!spot) return;
+
+    const week = plan.weeks[weekIdx];
+    const gk = 'spot_' + spotId;
+
+    // Check if already added
+    if (week.leaks.some(l => l.groupKey === gk)) {
+        alert('Este spot já está nesta semana!');
+        return;
+    }
+
+    week.leaks.push({
+        groupKey: gk,
+        groupLabel: '🔍 ' + spot.name,
+        isGroup: false,
+        isCustom: true,
+        stats: [],
+        category: 'all'
+    });
+
+    // Initialize checklist and notes
+    week.checklist[gk] = {};
+    if (!week.notes) week.notes = {};
+    week.notes[gk] = {};
+    STUDY_CHECKLIST_TASKS.forEach(t => {
+        week.checklist[gk][t.key] = false;
+        week.notes[gk][t.key] = '';
+    });
+
+    saveState();
+    select.value = '';
+    renderWeekLeaks(week, weekIdx);
+    renderWeekDots();
+    updateWeeklyProgressBar();
 }
 
 // ---- Helpers ----

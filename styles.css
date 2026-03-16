@@ -3691,3 +3691,63 @@ td.leak-stat-dev {
   background: rgba(0, 0, 0, 0.03);
   border-color: rgba(0, 0, 0, 0.06);
 }
+
+/* =====================================================
+   Editable Study Plan
+   ===================================================== */
+
+.week-add-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+  flex-wrap: wrap;
+}
+
+.spot-add-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex: 1;
+  min-width: 200px;
+}
+
+.spot-select-dropdown {
+  flex: 1;
+  padding: var(--space-sm) var(--space-md);
+  font-size: 0.85rem;
+}
+
+.add-leak-form {
+  background: rgba(124, 58, 237, 0.06);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin-bottom: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.add-leak-form-btns {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.leak-edit-btn,
+.leak-remove-btn {
+  opacity: 0.4;
+  transition: all 0.2s;
+  font-size: 0.85rem;
+  padding: 4px;
+}
+
+.leak-edit-btn:hover {
+  opacity: 1;
+  color: var(--accent-secondary);
+}
+
+.leak-remove-btn:hover {
+  opacity: 1;
+  color: var(--color-danger);
+}
